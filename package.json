@@ -14,5 +14,9 @@
   "bugs": {
     "url": "https://github.com/yesiree/channels/issues"
   },
-  "homepage": "https://github.com/yesiree/channels#readme"
+  "homepage": "https://github.com/yesiree/channels#readme",
+  "dependencies": {
+    "chokidar": "^2.0.4",
+    "multi-glob": "^1.0.1"
+  }
 }
