@@ -16,8 +16,8 @@
   },
   "homepage": "https://github.com/yesiree/channels#readme",
   "dependencies": {
-    "@yesiree/bus": "^0.1.1",
-    "chokidar": "^2.0.4",
+    "@yesiree/bus": "^0.1.2",
+    "chokidar": "^2.1.8",
     "globs": "^0.1.4"
   }
 }
