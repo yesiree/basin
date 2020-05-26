@@ -1,0 +1,14 @@
+{
+  "name": "simple",
+  "version": "1.0.0",
+  "description": "A simple example of using the @yesiree/basin package.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ."
+  },
+  "author": "yesiree foundation",
+  "license": "MIT",
+  "dependencies": {
+    "@yesiree/basin": "file:../.."
+  }
+}
