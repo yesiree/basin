@@ -1,5 +1,4 @@
 const crypto = require('crypto')
-const { extname } = require('path')
 
 const escapeRegExp = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -34,13 +33,13 @@ const getHash = content => {
   return hash
 }
 
-const getCacheBustingPath = (path, content) => {
+module.exports.getCacheBustingPath = (path, content) => {
   const hash = getHash(content)
   const [base, ext] = splitPath(path)
   return `${base}.${hash}.${ext}`
 }
 
-const replaceWithCacheBustingPaths = ({
+module.exports.replaceWithCacheBustingPaths = ({
   path,
   cacheBustingPath,
   content,
