@@ -39,7 +39,7 @@ module.exports.getCacheBustingPath = (path, content) => {
   return `${base}.${hash}.${ext}`
 }
 
-module.exports.replaceWithCacheBustingPaths = ({
+module.exports.replaceWithCacheBustingPath = ({
   path,
   cacheBustingPath,
   content,
@@ -47,8 +47,8 @@ module.exports.replaceWithCacheBustingPaths = ({
   closingTag
 }) => {
   const [base, ext] = splitPath(path)
-  const reStr = escapeRegExp(base) + '(\\.[a-z0-9]{25})?'
-  if (ext) + escapeRegExp('.' + ext)
+  let reStr = escapeRegExp(base) + '(\\.[a-z0-9]{25})?'
+  if (ext) reStr += escapeRegExp('.' + ext)
   if (openingTag && closingTag) {
     reStr = escapeRegExp(openingTag) + '\\s*?'
       + reStr

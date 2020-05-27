@@ -1,5 +1,5 @@
 const fs = require('fs')
-const { join, relative } = require('path')
+const { join, relative, dirname } = require('path')
 const chokidar = require('chokidar')
 const rimraf = require('rimraf')
 const mkdirp = require('mkdirp')
@@ -38,21 +38,46 @@ function Basin({
 Basin.Ready = Symbol('Basin__Ready')
 Basin.Default = Symbol('Basin__Default')
 
+const BasinEventTypes = ['RDY', 'ADD', 'MOD', 'DEL']
+function BasinEvent(type) {
+  if (!BasinEventTypes.includes(type)) {
+    throw new Error(`Invalid Basin Event Type: ${type}.`)
+  }
+  this.type = type
+}
+Object.defineProperties(BasinEvent.prototype, {
+  isRDY: {
+    get() { return this.type === 'RDY' }
+  },
+  isADD: {
+    get() { return this.type === 'ADD' }
+  },
+  isMOD: {
+    get() { return this.type === 'MOD' }
+  },
+  isPUT: {
+    get() { return this.type === 'ADD' || this.type === 'MOD' }
+  },
+  isDEL: {
+    get() { return this.type === 'DEL' }
+  }
+})
+
 Basin.prototype.run = function Basin__Instance__run() {
   const watcher = chokidar.watch(this._globs)
   let closed = false
   watcher
-    .on('ready', listener.bind(this, 'RDY'))
-    .on('add', listener.bind(this, 'ADD'))
-    .on('change', listener.bind(this, 'MOD'))
-    .on('unlink', listener.bind(this, 'DEL'))
+    .on('ready', listener.bind(this, new BasinEvent('RDY')))
+    .on('add', listener.bind(this, new BasinEvent('ADD')))
+    .on('change', listener.bind(this, new BasinEvent('MOD')))
+    .on('unlink', listener.bind(this, new BasinEvent('DEL')))
 
-  async function listener(type, path) {
+  async function listener(evt, path) {
     if (closed) return
     let payload
-    switch (type) {
+    switch (evt.type) {
       case 'RDY':
-        this.ready = true
+        this._ready = true
         this.emit(Basin.Ready)
         if (!this.opts.watch) {
           closed = true
@@ -66,7 +91,7 @@ Basin.prototype.run = function Basin__Instance__run() {
           : await this.read(path, this.opts.root)
       case 'DEL':
         this._channels.forEach(({ name, isMatch }) => {
-          if (isMatch(path)) this.emit(name, type, payload)
+          if (isMatch(path)) this.emit(name, evt, payload)
         })
         break
       default:
@@ -75,19 +100,37 @@ Basin.prototype.run = function Basin__Instance__run() {
   }
 }
 
-
 Basin.prototype.cache = function Basin__Instance__cache(store, key, obj) {
-  if (this._cache[store]) {
+  if (!store || !key) {
+    throw new Error(`Must provide a store name and key. Provided store: ${store}; provided key: ${key}.`)
+  }
+  if (!this._cache[store]) {
     this._cache[store] = {}
   }
   return this._cache[store][key] = obj
 }
 
 Basin.prototype.purge = function Basin__Instance__purge(store, key) {
+  if (!store || !key) {
+    throw new Error(`Must provide a store name and key. Provided store: ${store}; provided key: ${key}.`)
+  }
   if (this._cache[store] || !this._cache[store][key]) return
   const obj = this._cache[store][key]
   delete this._cache[store][key]
   return obj
+}
+
+Basin.prototype.get = function Basin__Instance__get(store, key) {
+  if (!store) {
+    throw new Error(`Must provide a store name. Found '${store}'.`)
+  }
+  if (!key) {
+    return Object
+      .keys(this._cache[store] || {})
+      .map(key => this._cache[store][key])
+  } else {
+    return (this._cache[store] || {})[key]
+  }
 }
 
 Basin.prototype.read = function Basin__read(path, root) {
@@ -107,7 +150,7 @@ Basin.prototype.read = function Basin__read(path, root) {
 Basin.prototype.write = function Basin__write(path, data, root) {
   if (root) path = join(root, path)
   return new Promise(async (resolve, reject) => {
-    await mkdirp(path)
+    await mkdirp(dirname(path))
     fs.writeFile(path, data, err => {
       if (err) return reject(err)
       resolve()
@@ -157,6 +200,11 @@ Basin.prototype.emit = function Basin__Instance__emit(name, ...args) {
   )
 }
 
+Object.defineProperties(Basin.prototype, {
+  ready: {
+    get() { return this._ready }
+  }
+})
 
 // const basin = new Basin({
 //   watch: false,
