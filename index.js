@@ -35,34 +35,6 @@ function Basin({
     })
 }
 
-Basin.Ready = Symbol('Basin__Ready')
-Basin.Default = Symbol('Basin__Default')
-
-const BasinEventTypes = ['RDY', 'ADD', 'MOD', 'DEL']
-function BasinEvent(type) {
-  if (!BasinEventTypes.includes(type)) {
-    throw new Error(`Invalid Basin Event Type: ${type}.`)
-  }
-  this.type = type
-}
-Object.defineProperties(BasinEvent.prototype, {
-  isRDY: {
-    get() { return this.type === 'RDY' }
-  },
-  isADD: {
-    get() { return this.type === 'ADD' }
-  },
-  isMOD: {
-    get() { return this.type === 'MOD' }
-  },
-  isPUT: {
-    get() { return this.type === 'ADD' || this.type === 'MOD' }
-  },
-  isDEL: {
-    get() { return this.type === 'DEL' }
-  }
-})
-
 Basin.prototype.run = function Basin__Instance__run() {
   const watcher = chokidar.watch(this._globs)
   let closed = false
@@ -133,40 +105,6 @@ Basin.prototype.get = function Basin__Instance__get(store, key) {
   }
 }
 
-Basin.prototype.read = function Basin__read(path, root) {
-  const filename = path
-  path = root ? relative(root, path) : path
-  return new Promise((resolve, reject) => {
-    fs.readFile(filename, (err, data) => {
-      if (err) return reject(err)
-      resolve({
-        path,
-        content: data.toString()
-      })
-    })
-  })
-}
-
-Basin.prototype.write = function Basin__write(path, data, root) {
-  if (root) path = join(root, path)
-  return new Promise(async (resolve, reject) => {
-    await mkdirp(dirname(path))
-    fs.writeFile(path, data, err => {
-      if (err) return reject(err)
-      resolve()
-    })
-  })
-}
-
-Basin.prototype.rimraf = function Basin__rimraf(glob) {
-  return new Promise((resolve, reject) => {
-    rimraf(glob, err => {
-      if (err) return reject(err)
-      resolve()
-    })
-  })
-}
-
 Basin.prototype.on = function Basin__Instance__on(name, listener) {
   if (!listener && typeof name === 'function') {
     listener = name
@@ -206,19 +144,65 @@ Object.defineProperties(Basin.prototype, {
   }
 })
 
-// const basin = new Basin({
-//   watch: false,
-//   root: '/path',
-//   channels: {
-//     foo: '**/*.*'
-//   }
-// })
+Basin.read = Basin.prototype.read = function Basin__read(path, root) {
+  const filename = path
+  path = root ? relative(root, path) : path
+  return new Promise((resolve, reject) => {
+    fs.readFile(filename, (err, data) => {
+      if (err) return reject(err)
+      resolve({
+        path,
+        content: data.toString()
+      })
+    })
+  })
+}
 
-// basin.on(Basin.Ready, () => {
-//   basin.cache...
-//
-// })
+Basin.write = Basin.prototype.write = function Basin__write(path, data, root) {
+  if (root) path = join(root, path)
+  return new Promise(async (resolve, reject) => {
+    await mkdirp(dirname(path))
+    fs.writeFile(path, data, err => {
+      if (err) return reject(err)
+      resolve()
+    })
+  })
+}
 
-// basin.on('foo', (type, data) => {
+Basin.rimraf = Basin.prototype.rimraf = function Basin__rimraf(glob) {
+  return new Promise((resolve, reject) => {
+    rimraf(glob, err => {
+      if (err) return reject(err)
+      resolve()
+    })
+  })
+}
 
-// })
+Basin.Ready = Symbol('Basin__Ready')
+Basin.Default = Symbol('Basin__Default')
+
+
+const BasinEventTypes = ['RDY', 'ADD', 'MOD', 'DEL']
+function BasinEvent(type) {
+  if (!BasinEventTypes.includes(type)) {
+    throw new Error(`Invalid Basin Event Type: ${type}.`)
+  }
+  this.type = type
+}
+Object.defineProperties(BasinEvent.prototype, {
+  isRDY: {
+    get() { return this.type === 'RDY' }
+  },
+  isADD: {
+    get() { return this.type === 'ADD' }
+  },
+  isMOD: {
+    get() { return this.type === 'MOD' }
+  },
+  isPUT: {
+    get() { return this.type === 'ADD' || this.type === 'MOD' }
+  },
+  isDEL: {
+    get() { return this.type === 'DEL' }
+  }
+})
