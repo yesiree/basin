@@ -22,8 +22,8 @@ const basin = new Basin({
   }
 })
 
-basin.on('markdown', function (evt, file) {
-  if (evt.isDEL) return
+basin.on('markdown', function (file) {
+  if (file.event === 'DEL') return
   // convert file.content to html...
   this.write(file.path, file.content)
 })
