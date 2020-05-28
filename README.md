@@ -32,7 +32,7 @@ basin.on('markdown', /*async*/ function (file) {
 
 ## Tutorial
 
-> A simple bundler, with preprocessors, minification, cache-busting URLs, and template rendering.
+> Create a simple bundler, with preprocessors, minification, cache-busting URLs, and template rendering.
 
 
 ## API
