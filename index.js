@@ -7,31 +7,49 @@ const pico = require('picomatch')
 
 module.exports = Basin
 
+/**
+ * Creates an instance of Basin
+ *
+ * @example
+ *
+ *  const basin = new Basin({
+ *    sourceRoot: 'src/**\/',
+ *    sources: {
+ *      js: 'src/**\/*.js',
+ *      scss: 'src/**\/*.scss',
+ *      html: 'src/**\/*.html'
+ *    }
+ *  })
+ *
+ * @param {Object} opts - Options for configuring the Basin instance.
+ * @param {boolean} opts.watch - If true, file changes will be watched.
+ * @param {boolean} opts.emitPath - If true, emit file paths instead of file objects (path and content)
+ * @param {string} opts.sourceRoot - A prefix to remove from file paths before emitting them.
+ * @param {Object Map} opts.sources - A map of source names and globs.
+ * @return {Basin Instance} A Basin instance.
+ */
 function Basin({
   watch = false,
   emitPath = false,
-  root = undefined,
-  channels = { [Basin.Default]: '**/*' }
+  sourceRoot = undefined,
+  sources = { [Basin.Default]: '**/*' }
 } = {}) {
   this.opts = {}
   this.opts.watch = watch
   this.opts.emitPath = emitPath
-  this.opts.root = root
+  this.opts.sourceRoot = sourceRoot
   this._ready = false
   this._cache = {}
   this._events = {}
   this._globs = []
-  this._channels = []
+  this._sources = []
   Object
-    .keys(channels)
+    .keys(sources)
     .forEach(name => {
-      const glob = channels[name]
+      const glob = sources[name]
       if (glob === Basin.None) return
-      this._globs.push(channels[name])
-      this._channels.push({
-        name,
-        isMatch: pico(glob)
-      })
+      this._globs.push(sources[name])
+      this._sources.push({ name, isMatch: pico(glob) })
     })
 }
 
@@ -39,15 +57,16 @@ Basin.prototype.run = function Basin__Instance__run() {
   const watcher = chokidar.watch(this._globs)
   let closed = false
   watcher
-    .on('ready', listener.bind(this, new BasinEvent('RDY')))
-    .on('add', listener.bind(this, new BasinEvent('ADD')))
-    .on('change', listener.bind(this, new BasinEvent('MOD')))
-    .on('unlink', listener.bind(this, new BasinEvent('DEL')))
+    .on('ready', listener.bind(this, 'RDY'))
+    .on('add', listener.bind(this, 'ADD'))
+    .on('change', listener.bind(this, 'MOD'))
+    .on('unlink', listener.bind(this, 'DEL'))
+  return this
 
-  async function listener(evt, path) {
+  async function listener(event, path) {
     if (closed) return
-    let payload
-    switch (evt.type) {
+    let payload = { event, path }
+    switch (event) {
       case 'RDY':
         this._ready = true
         this.emit(Basin.Ready)
@@ -58,12 +77,16 @@ Basin.prototype.run = function Basin__Instance__run() {
         break
       case 'ADD':
       case 'MOD':
-        payload = this.opts.emitPath
-          ? path
-          : await this.read(path, this.opts.root)
+        if (!this.opts.emitPath) {
+          payload = {
+            ...await this.read(path, this.opts.sourceRoot),
+            event
+          }
+        }
       case 'DEL':
-        this._channels.forEach(({ name, isMatch }) => {
-          if (isMatch(path)) this.emit(name, evt, payload)
+        this.emit(Basin.Sources, payload)
+        this._sources.forEach(({ name, isMatch }) => {
+          if (isMatch(path)) this.emit(name, payload)
         })
         break
       default:
@@ -140,6 +163,7 @@ Basin.prototype.emit = function Basin__Instance__emit(name, ...args) {
 
 Object.defineProperties(Basin.prototype, {
   ready: {
+    configurable: false,
     get() { return this._ready }
   }
 })
@@ -180,29 +204,4 @@ Basin.rimraf = Basin.prototype.rimraf = function Basin__rimraf(glob) {
 
 Basin.Ready = Symbol('Basin__Ready')
 Basin.Default = Symbol('Basin__Default')
-
-
-const BasinEventTypes = ['RDY', 'ADD', 'MOD', 'DEL']
-function BasinEvent(type) {
-  if (!BasinEventTypes.includes(type)) {
-    throw new Error(`Invalid Basin Event Type: ${type}.`)
-  }
-  this.type = type
-}
-Object.defineProperties(BasinEvent.prototype, {
-  isRDY: {
-    get() { return this.type === 'RDY' }
-  },
-  isADD: {
-    get() { return this.type === 'ADD' }
-  },
-  isMOD: {
-    get() { return this.type === 'MOD' }
-  },
-  isPUT: {
-    get() { return this.type === 'ADD' || this.type === 'MOD' }
-  },
-  isDEL: {
-    get() { return this.type === 'DEL' }
-  }
-})
+Basin.Sources = Symbol('Basin__Sources')

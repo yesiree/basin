@@ -4,20 +4,25 @@ const {
   replaceWithCacheBustingPath
 } = require('@yesiree/basin/utils/assets')
 
-const basin = new Basin({
-  root: 'src',
-  channels: {
+const cfg = {
+  watch: true,
+  sourceRoot: 'src',
+  sources: {
     assets: './src/**/*.{js,scss}',
     html: './src/**/*.html'
   }
-})
+}
 
-basin.on(Basin.Ready, function () {
-  return this.emit('write')
-})
+const basin = new Basin(cfg)
+  .on(Basin.Ready, () => basin.emit('write'))
+  .on('assets', assets)
+  .on('html', html)
+  .on('paths', updatePaths)
+  .on('write', writeFiles)
+  .run()
 
-basin.on('assets', function (evt, file) {
-  if (evt.isDEL) {
+function assets(file) {
+  if (file.type === 'DEL') {
     this.purge('assets', file.path)
     this.purge('templates', file.path)
     return
@@ -26,17 +31,17 @@ basin.on('assets', function (evt, file) {
   file.dest = getCacheBustingPath(file.path, file.content)
   this.cache('assets', file.path, file)
   this.cache('templates', file.path, file)
-  return this.emit('update-paths')
-})
+  return this.emit('paths')
+}
 
-basin.on('html', function (evt, file) {
-  if (evt.isDEL) return this.purge('templates', file.path)
+function html(file) {
+  if (file.type === 'DEL') return this.purge('templates', file.path)
   file.dest = file.path
   this.cache('templates', file.path, file)
-  return this.emit('update-paths')
-})
+  return this.emit('paths')
+}
 
-basin.on('update-paths', function () {
+function updatePaths() {
   const assets = this.get('assets')
   assets.forEach(asset => this.cache('static', asset.path, asset))
   this
@@ -54,16 +59,20 @@ basin.on('update-paths', function () {
       this.cache('static', template.path, template)
     })
   return this.emit('write')
-})
+}
 
-basin.on('write', async function () {
+async function writeFiles() {
   if (!this.ready) return
   await this.rimraf('./dist/**/*')
   this
     .get('static')
+    .sort((a, b) => {
+      const aOrder = a.dest.endsWith('.html') ? 1 : 0
+      const bOrder = b.dest.endsWith('.html') ? 1 : 0
+      return aOrder - bOrder
+    })
     .forEach(file => {
       this.write(file.dest, file.content, './dist')
     })
-})
-
-basin.run()
+  console.log('Updated.')
+}
