@@ -4,7 +4,7 @@
   "description": "An asynchronous, event-emitting, file watching, process channeling, static-site generating, build tool.",
   "main": "index.js",
   "scripts": {
-    "test": "echo '\n    No testing yet.\n\n'; exit -1"
+    "test": "cd examples/simple && node ."
   },
   "repository": {
     "type": "git",

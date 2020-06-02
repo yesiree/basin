@@ -7,7 +7,6 @@ const {
 const cfg = {
   watch: true,
   root: 'src',
-  ignore: '**/*.js',
   sources: {
     assets: '**/*.{js,scss}',
     html: '**/*.html'
