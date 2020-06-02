@@ -8,7 +8,10 @@ const cfg = {
   watch: true,
   root: 'src',
   sources: {
-    assets: '**/*.{js,scss}',
+    assets: [
+      '**/*.js',
+      '**/*.scss'
+    ],
     html: '**/*.html'
   }
 }
@@ -64,15 +67,14 @@ function updatePaths() {
 async function writeFiles() {
   if (!this.ready) return
   await this.rimraf('./dist/**/*')
-  this
+  const promises = this
     .get('static')
     .sort((a, b) => {
       const aOrder = a.dest.endsWith('.html') ? 1 : 0
       const bOrder = b.dest.endsWith('.html') ? 1 : 0
       return aOrder - bOrder
     })
-    .forEach(file => {
-      this.write(file.dest, file.content, './dist')
-    })
+    .map(file => this.write(file.dest, file.content, './dist'))
+  await Promise.all(promises)
   console.log('Updated.')
 }

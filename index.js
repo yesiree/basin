@@ -50,9 +50,13 @@ function Basin({
   Object
     .keys(sources)
     .forEach(name => {
-      const glob = this.opts.root ? join(this.opts.root, sources[name]) : sources[name]
-      this._globs.push(glob)
-      this._sources.push({ name, isMatch: pico(glob) })
+      const globs = (
+        Array.isArray(sources[name])
+          ? sources[name]
+          : [sources[name]]
+      ).map(glob => this.opts.root ? join(this.opts.root, glob) : glob)
+      this._globs.push(globs)
+      this._sources.push({ name, isMatch: pico(globs) })
     })
 }
 
