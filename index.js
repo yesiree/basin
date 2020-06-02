@@ -61,7 +61,7 @@ function Basin({
 }
 
 Basin.prototype.run = function Basin__Instance__run() {
-  const initPromises = []
+  let initFileReads = []
   const watcher = chokidar.watch(this._globs, { ignored: this.opts.ignore })
   let closed = false
   watcher
@@ -76,7 +76,8 @@ Basin.prototype.run = function Basin__Instance__run() {
     let payload = { event, path }
     switch (event) {
       case 'RDY':
-        await Promise.all(initPromises)
+        await Promise.all(initFileReads)
+        initFileReads = null
         this._ready = true
         this.emit(Basin.Ready)
         if (!this.opts.watch) {
@@ -87,9 +88,9 @@ Basin.prototype.run = function Basin__Instance__run() {
       case 'ADD':
       case 'MOD':
         if (!this.opts.emitPath) {
-          const file$ = this.read(path, this.opts.root)
-          if (!this._ready) initPromises.push(file$)
-          payload = { ...await file$, event }
+          const fileRead = this.read(path, this.opts.root)
+          if (initFileReads) initFileReads.push(fileRead)
+          payload = { ...await fileRead, event }
         }
       case 'DEL':
         this.emit(Basin.Sources, payload)
