@@ -13,7 +13,8 @@ module.exports = Basin
  * @example
  *
  *  const basin = new Basin({
- *    sourceRoot: 'src/**\/',
+ *    root: 'src/**\/',
+ *    ignore: 'glob...',
  *    sources: {
  *      js: 'src/**\/*.js',
  *      scss: 'src/**\/*.scss',
@@ -24,20 +25,23 @@ module.exports = Basin
  * @param {Object} opts - Options for configuring the Basin instance.
  * @param {boolean} opts.watch - If true, file changes will be watched.
  * @param {boolean} opts.emitPath - If true, emit file paths instead of file objects (path and content)
- * @param {string} opts.sourceRoot - A prefix to remove from file paths before emitting them.
+ * @param {string} opts.root - A prefix...
+ * @param {anymatch} opts.ignore - ...
  * @param {Object Map} opts.sources - A map of source names and globs.
  * @return {Basin Instance} A Basin instance.
  */
 function Basin({
   watch = false,
   emitPath = false,
-  sourceRoot = undefined,
-  sources = { [Basin.Default]: '**/*' }
+  root = undefined,
+  sources = { [Basin.Default]: '**/*' },
+  ignore = undefined
 } = {}) {
   this.opts = {}
   this.opts.watch = watch
   this.opts.emitPath = emitPath
-  this.opts.sourceRoot = sourceRoot
+  this.opts.root = root
+  this.opts.ignore = ignore
   this._ready = false
   this._cache = {}
   this._events = {}
@@ -46,15 +50,14 @@ function Basin({
   Object
     .keys(sources)
     .forEach(name => {
-      const glob = sources[name]
-      if (glob === Basin.None) return
-      this._globs.push(sources[name])
+      const glob = join(this.opts.root, sources[name])
+      this._globs.push(glob)
       this._sources.push({ name, isMatch: pico(glob) })
     })
 }
 
 Basin.prototype.run = function Basin__Instance__run() {
-  const watcher = chokidar.watch(this._globs)
+  const watcher = chokidar.watch(this._globs, { ignored: this.opts.ignore })
   let closed = false
   watcher
     .on('ready', listener.bind(this, 'RDY'))
@@ -79,7 +82,7 @@ Basin.prototype.run = function Basin__Instance__run() {
       case 'MOD':
         if (!this.opts.emitPath) {
           payload = {
-            ...await this.read(path, this.opts.sourceRoot),
+            ...await this.read(path, this.opts.root),
             event
           }
         }

@@ -1,10 +1,10 @@
 {
   "name": "@yesiree/basin",
-  "version": "0.1.0",
-  "description": "An asynchronous, file watching, process channeling, static-site generating, build tool.",
+  "version": "0.2.0",
+  "description": "An asynchronous, event-emitting, file watching, process channeling, static-site generating, build tool.",
   "main": "index.js",
   "scripts": {
-    "test": "node test"
+    "test": "echo '\n    No testing yet.\n\n'; exit -1"
   },
   "repository": {
     "type": "git",
