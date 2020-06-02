@@ -16,9 +16,9 @@ npm i @yesiree/basin
 const Basin = require('@yesiree/basin')
 
 const basin = new Basin({
-  sourceRoot: 'src',
+  root: 'src',
   sources: {
-    markdown: 'src/**/*.md'
+    markdown: '**/*.md'
   }
 })
 
@@ -47,4 +47,3 @@ A couple of things to note about this example:
 
 
 ## API
-
