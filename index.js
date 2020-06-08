@@ -12,19 +12,41 @@ module.exports = Basin
  *
  * @example
  *
+ *  new Basin({ root: 'src' })
+ *    .on(Basin.Ready, () => console.log('Initial scan complete.'))
+ *    .on(path => console.log(path))
+ *
+ *
+ * @example
+ *
+ *  const { join } = require('path')
+ *  const marked = require('marked')
+ *
  *  const basin = new Basin({
- *    root: 'src/**\/',
- *    ignore: 'glob...',
+ *    root: 'src',
+ *    ignore: '**\/node_modules/**',
+ *    watch: true,
+ *    emitFile: true,
  *    sources: {
- *      js: 'src/**\/*.js',
- *      scss: 'src/**\/*.scss',
- *      html: 'src/**\/*.html'
+ *      markdown: '**\/*.md'
  *    }
  *  })
  *
+ *  basin.on('markdown', file => {
+ *    file.content = marked(file.content)
+ *    basin.emit('write', file)
+ *  })
+ *
+ *  basin.on('write', async file => {
+ *    const path = join('dist', file.path)
+ *    await Basin.write(path, file.content)
+ *    console.log(`File '${file.path}' updated.`)
+ *  })
+ *
+ *
  * @param {Object} opts - Options for configuring the Basin instance.
  * @param {boolean} opts.watch - If true, file changes will be watched.
- * @param {boolean} opts.emitPath - If true, emit file paths instead of file objects (path and content)
+ * @param {boolean} opts.emitFile - If true, emit files (path and content) instead of just file paths
  * @param {string} opts.root - A prefix...
  * @param {anymatch} opts.ignore - ...
  * @param {Object Map} opts.sources - A map of source names and globs.
@@ -32,14 +54,14 @@ module.exports = Basin
  */
 function Basin({
   watch = false,
-  emitPath = false,
+  emitFile = false,
   root = process.cwd(),
-  sources = { [Basin.Default]: '**/*' },
+  sources = { [Basin__Default]: '**/*' },
   ignore = undefined
 } = {}) {
   this.opts = {}
   this.opts.watch = watch
-  this.opts.emitPath = emitPath
+  this.opts.emitFile = emitFile
   this.opts.root = root
   this.opts.ignore = ignore
   this._ready = false
@@ -48,6 +70,7 @@ function Basin({
   this._rootGlob = join(this.opts.root, '**/*')
   this._globs = []
   this._sources = []
+
   Object
     .keys(sources)
     .forEach(name => {
@@ -88,13 +111,13 @@ Basin.prototype.run = function Basin__Instance__run() {
         break
       case 'ADD':
       case 'MOD':
-        if (!this.opts.emitPath) {
+        if (this.opts.emitFile) {
           const fileRead = this.read(path, this.opts.root)
           if (initFileReads) initFileReads.push(fileRead)
           payload = { ...await fileRead, event }
         }
       case 'DEL':
-        this.emit(Basin.Sources, payload)
+        this.emit(Basin.All, payload)
         this._sources.forEach(({ name, isMatch }) => {
           if (isMatch(path)) this.emit(name, payload)
         })
@@ -141,7 +164,7 @@ Basin.prototype.get = function Basin__Instance__get(store, key) {
 Basin.prototype.on = function Basin__Instance__on(name, listener) {
   if (!listener && typeof name === 'function') {
     listener = name
-    name = Basin.Default
+    name = Basin__Default
   }
   if (!Array.isArray(this._events[name])) this._events[name] = []
   this._events[name].push(listener)
@@ -212,6 +235,6 @@ Basin.rimraf = Basin.prototype.rimraf = function Basin__rimraf(glob) {
   })
 }
 
+Basin__Default = Symbol('Basin__Default')
 Basin.Ready = Symbol('Basin__Ready')
-Basin.Default = Symbol('Basin__Default')
-Basin.Sources = Symbol('Basin__Sources')
+Basin.All = Symbol('Basin__All')
