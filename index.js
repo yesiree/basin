@@ -33,7 +33,7 @@ module.exports = Basin
 function Basin({
   watch = false,
   emitPath = false,
-  root = undefined,
+  root = process.cwd(),
   sources = { [Basin.Default]: '**/*' },
   ignore = undefined
 } = {}) {
@@ -45,6 +45,7 @@ function Basin({
   this._ready = false
   this._cache = {}
   this._events = {}
+  this._rootGlob = join(this.opts.root, '**/*')
   this._globs = []
   this._sources = []
   Object
@@ -62,7 +63,7 @@ function Basin({
 
 Basin.prototype.run = function Basin__Instance__run() {
   let initFileReads = []
-  const watcher = chokidar.watch(this._globs, { ignored: this.opts.ignore })
+  const watcher = chokidar.watch(this._rootGlob, { ignored: this.opts.ignore })
   let closed = false
   watcher
     .on('ready', listener.bind(this, 'RDY'))
