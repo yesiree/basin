@@ -17,6 +17,7 @@
   "homepage": "https://github.com/yesiree/channels#readme",
   "dependencies": {
     "chokidar": "^3.4.0",
+    "del": "^5.1.0",
     "mkdirp": "^1.0.4",
     "picomatch": "^2.2.2",
     "rimraf": "^3.0.2"

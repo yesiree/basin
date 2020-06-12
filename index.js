@@ -4,6 +4,7 @@ const chokidar = require('chokidar')
 const rimraf = require('rimraf')
 const mkdirp = require('mkdirp')
 const pico = require('picomatch')
+const del = require('del')
 
 module.exports = Basin
 
@@ -55,22 +56,25 @@ module.exports = Basin
 function Basin({
   watch = false,
   emitFile = false,
-  root = process.cwd(),
+  root,
   sources = { [Basin__Default]: '**/*' },
   ignore = undefined
 } = {}) {
   this.opts = {}
   this.opts.watch = watch
   this.opts.emitFile = emitFile
-  this.opts.root = root
+  this.opts.root = root || process.cwd()
   this.opts.ignore = ignore
   this._ready = false
   this._cache = {}
   this._events = {}
   this._rootGlob = join(this.opts.root, '**/*')
-  this._globs = []
   this._sources = []
+  const { resolve, promise } = Deferred()
+  this._resolveReady = resolve
+  this.whenReady = promise
 
+  let allGlobs = []
   Object
     .keys(sources)
     .forEach(name => {
@@ -79,13 +83,14 @@ function Basin({
           ? sources[name]
           : [sources[name]]
       ).map(glob => this.opts.root ? join(this.opts.root, glob) : glob)
-      this._globs.push(globs)
       this._sources.push({ name, isMatch: pico(globs) })
+      allGlobs = allGlobs.concat(globs)
     })
+  this._matchesAny = pico(allGlobs)
+  this.preparations = []
 }
 
 Basin.prototype.run = function Basin__Instance__run() {
-  let initFileReads = []
   const watcher = chokidar.watch(this._rootGlob, { ignored: this.opts.ignore })
   let closed = false
   watcher
@@ -93,33 +98,45 @@ Basin.prototype.run = function Basin__Instance__run() {
     .on('add', listener.bind(this, 'ADD'))
     .on('change', listener.bind(this, 'MOD'))
     .on('unlink', listener.bind(this, 'DEL'))
-  return this
 
   async function listener(event, path) {
     if (closed) return
-    let payload = { event, path }
+    let payload = {
+      type: event,
+      path: path ? relative(this.opts.root, path) : undefined,
+      absolutePath: path
+    }
     switch (event) {
       case 'RDY':
-        await Promise.all(initFileReads)
-        initFileReads = null
+        await Promise.all(this.preparations)
+        this.preparations = null
         this._ready = true
-        this.emit(Basin.Ready)
-        if (!this.opts.watch) {
-          closed = true
-          watcher.close()
-        }
+        this._resolveReady()
+        setTimeout(() => {
+          this.emit(Basin.Ready)
+          if (!this.opts.watch) {
+            closed = true
+            watcher.close()
+          }
+        })
         break
       case 'ADD':
       case 'MOD':
+        if (!this._matchesAny(path)) return
         if (this.opts.emitFile) {
           const fileRead = this.read(path, this.opts.root)
-          if (initFileReads) initFileReads.push(fileRead)
-          payload = { ...await fileRead, event }
+          if (this.preparations) this.preparations.push(fileRead)
+          const data = await fileRead
+          payload = Object.assign(payload, { data })
         }
       case 'DEL':
-        this.emit(Basin.All, payload)
+        const emitAll$ = this.emit(Basin.All, payload)
+        if (this.preparations) this.preparations.push(emitAll$)
         this._sources.forEach(({ name, isMatch }) => {
-          if (isMatch(path)) this.emit(name, payload)
+          if (isMatch(path)) {
+            const emitSource$ = this.emit(name, payload)
+            if (this.preparations) this.preparations.push(emitSource$)
+          }
         })
         break
       default:
@@ -186,12 +203,17 @@ Basin.prototype.once = function Basin__Instance__once(name, listener) {
   })
 }
 
-Basin.prototype.emit = function Basin__Instance__emit(name, ...args) {
+Basin.prototype.emit = async function Basin__Instance__emit(name, ...args) {
   const listeners = this._events[name]
   if (!Array.isArray(listeners)) return
-  return Promise.all(
+  await Promise.all(
     listeners.map(listener => listener.apply(this, args))
   )
+}
+
+Basin.prototype.emitWhenReady = async function Basin__Instance__emitWhenReady(name, ...args) {
+  await this.whenReady
+  await this.emit(name, ...args)
 }
 
 Object.defineProperties(Basin.prototype, {
@@ -203,14 +225,10 @@ Object.defineProperties(Basin.prototype, {
 
 Basin.read = Basin.prototype.read = function Basin__read(path, root) {
   const filename = path
-  path = root ? relative(root, path) : path
   return new Promise((resolve, reject) => {
     fs.readFile(filename, (err, data) => {
       if (err) return reject(err)
-      resolve({
-        path,
-        content: data.toString()
-      })
+      resolve(data)
     })
   })
 }
@@ -235,6 +253,18 @@ Basin.rimraf = Basin.prototype.rimraf = function Basin__rimraf(glob) {
   })
 }
 
+Basin.clean = Basin.prototype.clean = async function Basin__clean(globs, opts) {
+  return await del(globs, opts)
+}
+
 Basin__Default = Symbol('Basin__Default')
 Basin.Ready = Symbol('Basin__Ready')
 Basin.All = Symbol('Basin__All')
+
+const Deferred = () => {
+  let resolve, reject, promise = new Promise((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { resolve, reject, promise }
+}
