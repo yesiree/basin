@@ -1,4 +1,4 @@
-const crypto = require('crypto')
+import crypto from 'crypto'
 
 const escapeRegExp = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -23,7 +23,10 @@ const splitPath = path => {
 }
 
 const getHash = content => {
-  let hash = crypto.createHash('md5').update(content).digest('hex')
+  let hash = crypto
+    .createHash('md5')
+    .update(content)
+    .digest('hex')
   if (typeof BigInt === 'undefined') {
     hash = hash.slice(0, 25)
   } else {
@@ -33,18 +36,18 @@ const getHash = content => {
   return hash
 }
 
-module.exports.getCacheBustingPath = (path, content) => {
+export const getCacheBustingPath = (path, content) => {
   const hash = getHash(content)
   const [base, ext] = splitPath(path)
   return `${base}.${hash}.${ext}`
 }
 
-module.exports.replaceWithCacheBustingPath = ({
+export const replaceWithCacheBustingPath = ({
   path,
-  cacheBustingPath,
   content,
+  cacheBustingPath = getCacheBustingPath(path, content),
   openingTag,
-  closingTag
+  closingTag,
 }) => {
   const [base, ext] = splitPath(path)
   let reStr = escapeRegExp(base) + '(\\.[a-z0-9]{25})?'

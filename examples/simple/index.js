@@ -1,12 +1,13 @@
-const Basin = require('@yesiree/basin')
-const {
+import {
+  Basin,
   getCacheBustingPath,
-  replaceWithCacheBustingPath
-} = require('@yesiree/basin/utils/assets')
+  replaceWithCacheBustingPath,
+} from '../../index.js'
 
 const cfg = {
   watch: true,
   root: 'src',
+  emitFile: true,
   sources: {
     assets: [
       '**/*.js',
@@ -31,6 +32,7 @@ function assets(file) {
     return
   }
   if (file.path.endsWith('.scss')) file.path = file.path.slice(0, -4) + 'css'
+  file.content = file.data.toString()
   file.dest = getCacheBustingPath(file.path, file.content)
   this.cache('assets', file.path, file)
   this.cache('templates', file.path, file)
@@ -39,6 +41,7 @@ function assets(file) {
 
 function html(file) {
   if (file.type === 'DEL') return this.purge('templates', file.path)
+  file.content = file.data.toString()
   file.dest = file.path
   this.cache('templates', file.path, file)
   return this.emit('paths')
@@ -54,8 +57,8 @@ function updatePaths() {
       assets.forEach(asset => {
         content = replaceWithCacheBustingPath({
           path: asset.path,
+          content,
           cacheBustingPath: asset.dest,
-          content
         })
       })
       template.content = content

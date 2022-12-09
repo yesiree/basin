@@ -1,12 +1,12 @@
-const fs = require('fs')
-const { join, relative, dirname } = require('path')
-const chokidar = require('chokidar')
-const rimraf = require('rimraf')
-const mkdirp = require('mkdirp')
-const pico = require('picomatch')
-const del = require('del')
+import fs from 'fs'
+import { join, relative, dirname } from 'path'
+import chokidar from 'chokidar'
+import rimraf from 'rimraf'
+import mkdirp from 'mkdirp'
+import pico from 'picomatch'
+import del from 'del'
 
-module.exports = Basin
+export * from './utils/assets.js'
 
 /**
  * Creates an instance of Basin
@@ -53,11 +53,11 @@ module.exports = Basin
  * @param {Object Map} opts.sources - A map of source names and globs.
  * @return {Basin Instance} A Basin instance.
  */
-function Basin({
+export function Basin({
   watch = false,
   emitFile = false,
-  root,
-  sources = { [Basin__Default]: '**/*' },
+  root = '',
+  sources = { [Basin.Default]: '**/*' },
   ignore = undefined
 } = {}) {
   this.opts = {}
@@ -98,6 +98,7 @@ Basin.prototype.run = function Basin__Instance__run() {
     .on('add', listener.bind(this, 'ADD'))
     .on('change', listener.bind(this, 'MOD'))
     .on('unlink', listener.bind(this, 'DEL'))
+  return this
 
   async function listener(event, path) {
     if (closed) return
@@ -124,7 +125,7 @@ Basin.prototype.run = function Basin__Instance__run() {
       case 'MOD':
         if (!this._matchesAny(path)) return
         if (this.opts.emitFile) {
-          const fileRead = this.read(path, this.opts.root)
+          const fileRead = this.read(path)
           if (this.preparations) this.preparations.push(fileRead)
           const data = await fileRead
           payload = Object.assign(payload, { data })
@@ -181,7 +182,7 @@ Basin.prototype.get = function Basin__Instance__get(store, key) {
 Basin.prototype.on = function Basin__Instance__on(name, listener) {
   if (!listener && typeof name === 'function') {
     listener = name
-    name = Basin__Default
+    name = Basin.Default
   }
   if (!Array.isArray(this._events[name])) this._events[name] = []
   this._events[name].push(listener)
@@ -224,7 +225,7 @@ Object.defineProperties(Basin.prototype, {
 })
 
 Basin.read = Basin.prototype.read = function Basin__read(path, root) {
-  const filename = path
+  const filename = root ? join(root, path) : path
   return new Promise((resolve, reject) => {
     fs.readFile(filename, (err, data) => {
       if (err) return reject(err)
@@ -257,7 +258,7 @@ Basin.clean = Basin.prototype.clean = async function Basin__clean(globs, opts) {
   return await del(globs, opts)
 }
 
-Basin__Default = Symbol('Basin__Default')
+Basin.Default = Symbol('Basin__Default')
 Basin.Ready = Symbol('Basin__Ready')
 Basin.All = Symbol('Basin__All')
 
