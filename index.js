@@ -262,6 +262,10 @@ Basin.Default = Symbol('Basin__Default')
 Basin.Ready = Symbol('Basin__Ready')
 Basin.All = Symbol('Basin__All')
 
+Basin.ADD = 'ADD'
+Basin.MOD = 'MOD'
+Basin.DEL = 'DEL'
+
 const Deferred = () => {
   let resolve, reject, promise = new Promise((res, rej) => {
     resolve = res

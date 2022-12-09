@@ -26,7 +26,7 @@ const basin = new Basin(cfg)
   .run()
 
 function assets(file) {
-  if (file.type === 'DEL') {
+  if (file.type === Basin.DEL) {
     this.purge('assets', file.path)
     this.purge('templates', file.path)
     return
