@@ -27,7 +27,7 @@ export * from './utils/assets.js'
  *    root: 'src',
  *    ignore: '**\/node_modules/**',
  *    watch: true,
- *    emitFile: true,
+ *    emitFileData: true,
  *    sources: {
  *      markdown: '**\/*.md'
  *    }
@@ -47,7 +47,7 @@ export * from './utils/assets.js'
  *
  * @param {Object} opts - Options for configuring the Basin instance.
  * @param {boolean} opts.watch - If true, file changes will be watched.
- * @param {boolean} opts.emitFile - If true, emit files (path and content) instead of just file paths
+ * @param {boolean} opts.emitFileData - If true, emit files (path and content) instead of just file paths
  * @param {string} opts.root - A prefix...
  * @param {anymatch} opts.ignore - ...
  * @param {Object Map} opts.sources - A map of source names and globs.
@@ -55,14 +55,14 @@ export * from './utils/assets.js'
  */
 export function Basin({
   watch = false,
-  emitFile = false,
+  emitFileData = false,
   root = '',
   sources = { [Basin.Default]: '**/*' },
   ignore = undefined
 } = {}) {
   this.opts = {}
   this.opts.watch = watch
-  this.opts.emitFile = emitFile
+  this.opts.emitFileData = emitFileData
   this.opts.root = root || process.cwd()
   this.opts.ignore = ignore
   this._ready = false
@@ -124,7 +124,7 @@ Basin.prototype.run = function Basin__Instance__run() {
       case 'ADD':
       case 'MOD':
         if (!this._matchesAny(path)) return
-        if (this.opts.emitFile) {
+        if (this.opts.emitFileData) {
           const fileRead = this.read(path)
           if (this.preparations) this.preparations.push(fileRead)
           const data = await fileRead

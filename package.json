@@ -1,6 +1,6 @@
 {
   "name": "@yesiree/basin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "An asynchronous, event-emitting, file watching, process channeling, static-site generating, build tool.",
   "type": "module",
   "main": "index.js",

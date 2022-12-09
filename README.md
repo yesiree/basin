@@ -4,11 +4,21 @@ A generic file processor. You could use this for bundling, static site generatio
 
 Many site generation and task running tools take a linear approach. Basin uses an event emitting approach, which allows you to process files using whatever workflow you like. You can specify a map of source names and globs, separating files into different channels. Any changes (creation, modification, deletion) are emitted to those channels. Files can be processed and any artifacts can be re-emitted on any relevant channels for further processing or writing to a file, etc. You can emit whatever data you like to whichever channels you like whenever you like. You can even emit the same data to multiple channels. This provides a lot of flexibility and allows Basin to work for very simple and very complex workflows.
 
+
+
+
+
+
 ## Install
 
 ```
 npm i @yesiree/basin
 ```
+
+
+
+
+
 
 ## Example
 
@@ -39,7 +49,17 @@ A couple of things to note about this example:
  - Channels can be subscribed to using the Basin instance method `on`. The first parameter is the channel name, which in the case of source channels, is the name of the source specificed in the configuration object passed to the Basin constructor method.
  - Non-source channels don't need to be configured. You can simply emit data to a new channel by specifying a new name as the first parameter to the Basin instance's `emit` method, followed by whatever data you want to send to that channel (this is the case for the `write` channel in the example above).
 
+
+
+
+
+
 ## API — Basin
+
+
+
+
+
 
 ### Static Properties
 
@@ -56,6 +76,10 @@ A JavaScript symbol that is used to register listeners on a special `Basin.All` 
 A JavaScript symbol that is used to register listeners on a special `Basin.Default` channel. This channel is the default channel if no channels are specified in the `source` parameter to the basin constructor.
 
 
+
+
+
+
 ### Static Methods
 
 #### `Basin.constructor`
@@ -66,7 +90,7 @@ Creates a new `Basin` object.
  - `root` — The root path to read files from. This path will be further refined by the `sources` parameter. (Defaults to `/`.)
  - `sources` — A map of source names and globs (globs can be either strings or array of strings). These globs will be prefixed with the `root` parameter. The source names will be the names of Basin channels, and the globs will be used to find files to push to these chanels. (Defaults to `{ [Basin.Default]: '**/*'}`.)
  - `ignore` — a glob pattern to ignore when searching for files. (Defaults to `undefined`.)
- - `emitFile` — If true, a file object with `path` and `content` properties will be emitted on the channel, otherwise, only the `path` will be emitted.
+ - `emitFileData` — If true, a file object with `path` and `content` properties will be emitted on the channel, otherwise, only the `path` will be emitted.
 - `watch` — If true, Basin will watch for changes on the file system and emit those files to the appropriate channels.
 
 ##### Return Value
@@ -113,14 +137,22 @@ Deletes files matching `glob`.
 A promise that resolves when the files have been deleted.
 
 
+
+
+
+
 ### Instance Properties
 
 #### `basin.ready`
 
 A boolean property that indicates whether or not the `Basin.Ready` event has been fired or not.
 
-### Instance Methods
 
+
+
+
+
+### Instance Methods
 
 #### `basin.on(channel, listener)`
 
@@ -273,6 +305,29 @@ Deletes files matching `glob`.
 ##### Return Value
 
 A promise that resolves when the files have been deleted.
+
+### Listener Function
+
+#### `async listener = ({ type, path, absolutePath, data? }) => Promise`
+
+##### Parameters
+
+ - `type` — The type of event that was emitted. This will be one of the following:
+  - `'ADD'` — A file was created.
+  - `'MOD'` — A file was modified.
+  - `'DEL'` — A file was deleted.
+ - `path` — The path of the file that was created, modified, or deleted.
+ - `absolutePath` — The absolute path of the file that was created, modified, or deleted.
+ - `data` — The contents of the file that was created, modified, or deleted. This will only be present if the `emitFileData` option is passed to the `Basin` constructor.
+
+##### Return Value
+
+A promise that resolves when the listener has finished processing the event.
+
+
+
+
+
 
 ### Utility Methods
 
